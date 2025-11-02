@@ -51,9 +51,14 @@ std::vector<std::string> split_command(const std::string& input) {
                 token_ready = false;
             }
         } else {
-            curr_token += c;
             if(!in_quotes) {
+                if(c == '\\') {
+                    c = ' ';
+                }
+                curr_token += c;
                 token_ready = true;
+            } else {
+                curr_token += c;
             }
         }
     }
@@ -129,7 +134,8 @@ int echo_command(const std::vector<std::string>& args) {
 
 int type_command(const std::vector<std::string>& args) {
     if(args.empty()) {
-        std::cout << "error";
+        std::cout << "wrong usage of type command\n";
+        return 2;
     }
 
     auto it = builtins.find(args[0]);
