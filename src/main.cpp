@@ -27,113 +27,46 @@ const char* path_env = std::getenv("PATH");
 std::unordered_map<std::string, std::function<int(const std::vector<std::string>&)>> builtins;
 
 std::vector<std::string> split_command(const std::string& input) {
-    // STATES:
-    // 1. NORMAL (default) - Outside quotes
-    //    - Spaces break tokens
-    //    - Backslash (\) enters ESCAPING state
-    //    - Quotes enter respective quote states
-    //
-    // 2. IN_QUOTES_SINGLE - Inside ' quotes
-    //    - EVERYTHING IS LITERAL - no special characters
-    //    - Single quote (') returns to NORMAL
-    //    - Backslash (\) treated as normal character
-    //    - Double quotes (") treated as normal characters
-    //
-    // 3. IN_QUOTES_DOUBLE - Inside " quotes
-    //    - Limited escaping supported
-    //    - Double quote (") returns to NORMAL
-    //    - Backslash (\) enters ESCAPING state
-    //    - Single quotes (') treated as normal characters
-    //
-    // 4. ESCAPING (temporary) - Processes escaped character
-    //    - Duration: Exactly one character
-    //    - Behavior depends on previous state
-    //
-    // STATE TRANSITIONS:
-    // NORMAL + '  - IN_QUOTES_SINGLE
-    // NORMAL + "  - IN_QUOTES_DOUBLE
-    // NORMAL + \  - ESCAPING
-    // NORMAL + space - Break token (stay NORMAL)
-    //
-    // IN_QUOTES_SINGLE + '  - NORMAL
-    // IN_QUOTES_SINGLE + other - Add to token (stay)
-    //
-    // IN_QUOTES_DOUBLE + "  - NORMAL
-    // IN_QUOTES_DOUBLE + \  - ESCAPING
-    // IN_QUOTES_DOUBLE + other - Add to token (stay)
-    //
-    // ESCAPING transitions (based on previous state):
-    // Previous: NORMAL - Add character - NORMAL
-    // Previous: IN_QUOTES_DOUBLE:
-    //   + " or \ - Add character - IN_QUOTES_DOUBLE
-    //   + other - Add \ + character - IN_QUOTES_DOUBLE
-    //
-    // ESCAPE BEHAVIOR BY CONTEXT:
-    // Outside quotes (NORMAL): \ + any_char - any_char (backslash removed)
-    // Single quotes: \ - \ (literal, no escape)
-    // Double quotes: 
-    //   \" - " (escaped quote)
-    //   \\ - \ (escaped backslash)
-    //   \ + other - \ + other (backslash preserved)
-    //
-    // TOKEN BREAKING:
-    // - Only breaks by spaces in NORMAL state
-    // - Spaces inside quotes become part of token
-    // - Consecutive NORMAL spaces collapse to single break
-    // - Empty quotes don't create empty tokens
-    
     std::vector<std::string> tokens;
+    std::stringstream ss(input);
     std::string curr_token;
 
     char curr_quote = '\0';
     bool in_quotes = false;
-    bool escaping = false;
+    bool token_ready = false;
+    bool ignore_next = false;
 
-    for (char c : input) {
-        if (escaping) {
-            if (in_quotes && curr_quote == '"') {
-                if (c == '"' || c == '\\') {
-                    curr_token += c;  
-                } else {
-                    curr_token += '\\';
-                    curr_token += c;
-                }
-            } else {
-                curr_token += c;
-            }
-            escaping = false;
-        }
-        else if (c == '\\') {
-            if (in_quotes && curr_quote == '\'') {
-                curr_token += c;
-            } else {
-                escaping = true;
-            }
-        }
-        else if (!in_quotes && (c == '"' || c == '\'')) {
+    for(char c : input) {
+        if((c == '"' || c == '\'') && !in_quotes && !ignore_next) {
             in_quotes = true;
             curr_quote = c;
-        }
-        else if (in_quotes && c == curr_quote) {
+            token_ready = false;
+        } else if(in_quotes && c == curr_quote && !ignore_next) {
             in_quotes = false;
             curr_quote = '\0';
-        }
-        else if (std::isspace(c) && !in_quotes) {
-            if (!curr_token.empty()) {
+            token_ready = true;
+        } else if(std::isspace(c) && !in_quotes) {
+            if(token_ready || !curr_token.empty()) {
                 tokens.push_back(curr_token);
                 curr_token.clear();
+                token_ready = false;
+            }
+        } else {
+            if(!in_quotes) {
+                if(c == '\\') {
+                    c = '\0';
+                    ignore_next = true;
+                }
+                curr_token += c;
+                token_ready = true;
+            } else {
+                curr_token += c;
+                ignore_next = false;
             }
         }
-        else {
-            curr_token += c;
-        }
     }
     
-    if (escaping) {
-        curr_token += '\\';
-    }
-    
-    if (!curr_token.empty()) {
+    if(token_ready || !curr_token.empty()) {
         tokens.push_back(curr_token);
     }
     
@@ -204,7 +137,8 @@ int echo_command(const std::vector<std::string>& args) {
 
 int type_command(const std::vector<std::string>& args) {
     if(args.empty()) {
-        std::cout << "error";
+        std::cout << "wrong usage of type command\n";
+        return 2;
     }
 
     auto it = builtins.find(args[0]);
