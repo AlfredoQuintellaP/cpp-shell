@@ -34,13 +34,14 @@ std::vector<std::string> split_command(const std::string& input) {
     char curr_quote = '\0';
     bool in_quotes = false;
     bool token_ready = false;
+    bool ignore_next = false;
 
     for(char c : input) {
-        if((c == '"' || c == '\'') && !in_quotes) {
+        if((c == '"' || c == '\'') && !in_quotes && !ignore_next) {
             in_quotes = true;
             curr_quote = c;
             token_ready = false;
-        } else if(in_quotes && c == curr_quote) {
+        } else if(in_quotes && c == curr_quote && !ignore_next) {
             in_quotes = false;
             curr_quote = '\0';
             token_ready = true;
@@ -53,12 +54,14 @@ std::vector<std::string> split_command(const std::string& input) {
         } else {
             if(!in_quotes) {
                 if(c == '\\') {
-                    c = ' ';
+                    c = '\0';
+                    ignore_next = true;
                 }
                 curr_token += c;
                 token_ready = true;
             } else {
                 curr_token += c;
+                ignore_next = false;
             }
         }
     }
