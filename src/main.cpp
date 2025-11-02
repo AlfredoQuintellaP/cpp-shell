@@ -30,10 +30,38 @@ std::vector<std::string> split_command(const std::string& input) {
     std::vector<std::string> tokens;
     std::stringstream ss(input);
     std::string token;
+
+    char curr_quote = '\0';
+    std::string quoted_content;
+    bool in_quotes = false;
+
+    for(char c : input) {
+        if((c == '"' || c == '\'') && !in_quotes) {
+            in_quotes = true;
+            curr_quote = c;
+            if(!quoted_content.empty()) {
+                tokens.push_back(quoted_content);
+                quoted_content.clear();
+            }
+        } else if(in_quotes && c == curr_quote) {
+            in_quotes = false;
+            if(!quoted_content.empty()) {
+                tokens.push_back(quoted_content);
+                quoted_content.clear();
+            }
+            curr_quote = '\0';
+        } else if(std::isspace(c) && !in_quotes) {
+            if(!quoted_content.empty()) {
+                tokens.push_back(quoted_content);
+                quoted_content.clear();
+            }
+        } else {
+            quoted_content += c;
+        }
+    }
     
-    // Divide por espaços em branco
-    while (ss >> token) {
-        tokens.push_back(token);
+    if(!quoted_content.empty()) {
+        tokens.push_back(quoted_content);
     }
     
     return tokens;
