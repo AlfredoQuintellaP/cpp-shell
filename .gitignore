@@ -1,0 +1,36 @@
+# Build artifacts
+build/
+*.o
+*.a
+*.so
+*.dylib
+
+# Executables
+cpp_shell
+cpp_shell_debug
+*.exe
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Debug files
+*.dSYM/
+core
+*.core
+
+# Logs
+*.log
+
+# Temporary files
+/tmp/
+*.tmp
+
+# Dependencies
+deps/
