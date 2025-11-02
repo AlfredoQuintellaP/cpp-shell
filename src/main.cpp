@@ -29,39 +29,37 @@ std::unordered_map<std::string, std::function<int(const std::vector<std::string>
 std::vector<std::string> split_command(const std::string& input) {
     std::vector<std::string> tokens;
     std::stringstream ss(input);
-    std::string token;
+    std::string curr_token;
 
     char curr_quote = '\0';
-    std::string quoted_content;
     bool in_quotes = false;
+    bool token_ready = false;
 
     for(char c : input) {
         if((c == '"' || c == '\'') && !in_quotes) {
             in_quotes = true;
             curr_quote = c;
-            if(!quoted_content.empty()) {
-                tokens.push_back(quoted_content);
-                quoted_content.clear();
-            }
+            token_ready = false;
         } else if(in_quotes && c == curr_quote) {
             in_quotes = false;
-            if(!quoted_content.empty()) {
-                tokens.push_back(quoted_content);
-                quoted_content.clear();
-            }
             curr_quote = '\0';
+            token_ready = true;
         } else if(std::isspace(c) && !in_quotes) {
-            if(!quoted_content.empty()) {
-                tokens.push_back(quoted_content);
-                quoted_content.clear();
+            if(token_ready || !curr_token.empty()) {
+                tokens.push_back(curr_token);
+                curr_token.clear();
+                token_ready = false;
             }
         } else {
-            quoted_content += c;
+            curr_token += c;
+            if(!in_quotes) {
+                token_ready = true;
+            }
         }
     }
     
-    if(!quoted_content.empty()) {
-        tokens.push_back(quoted_content);
+    if(token_ready || !curr_token.empty()) {
+        tokens.push_back(curr_token);
     }
     
     return tokens;
